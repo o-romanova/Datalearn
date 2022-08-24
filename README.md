@@ -1,5 +1,6 @@
 # Datalearn course
-Data engineering course assignments
+## Data engineering course assignments
+
 Всем привет! 
 Тут будут жить задания в рамках курса *"Getting Started with Data Engineering and Analytics"*
 1. [DE-101/Module-01](https://www.example.com)
