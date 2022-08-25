@@ -2,8 +2,8 @@
 ## Data engineering course assignments
 
 Всем привет! 
-Тут будут жить задания в рамках курса *"Getting Started with Data Engineering and Analytics"*
-1. [DE-101/Module-01](https://www.example.com)
+Тут будут жить [задания](https://github.com/Bigdataworm/Datalearn/tree/main/DE-101) в рамках курса *"Getting Started with Data Engineering and Analytics"*
+1. [DE-101/Module-01](https://github.com/Bigdataworm/Datalearn/tree/main/DE-101/Module1)
 2. DE-101/Module-02
 
 Я планирую после этого и возможно ещё какого-то более узконаправленного курса(ов) сменить сферу деятельности для начала в BI Developer, а потом посмотрим :) 
@@ -14,5 +14,9 @@
 Плюс, я рассчитываю, что знание процессов со стороны "бизнеса" будет достаточно значимым козырем для роли BI Developer и Data Engineer.
 
 Дмитрий, спасибо большое за курс и привет из соседнего города ;)
+
+Сейчас на рынке огромное количество и платных и бесплатных (и условно бесплатных) ресурсов, но понять направление, в котором "копать" - это бесценно. И именно это я получаю из этого курса. Реально большой респект. 
+
+И да, наверное, заметно, что я графоман (гы), если кому интересно, я ещё веду [канал про моё житьё-бытьё в Канаде](https://t.me/missionbcpossible).
 
 ![Beautiful BC](https://user-images.githubusercontent.com/102954787/167276455-da45e94d-b565-46c5-9038-c030b1699867.jpg)
