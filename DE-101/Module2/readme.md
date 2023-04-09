@@ -9,3 +9,15 @@
 Для загрузки данных из БД Superstore использовала готовые sql файлы, хотя надо бы потом будет попробовать импорт средствами бобра хотя бы. 
 
 ## SQL запросы на основе экспелевского дашборда
+
+select 
+	to_char(order_date, 'YYYY-MM') as order_date_by_month,
+	round(sum(profit), 1) as profit_current_month
+from 
+	public.orders
+group by
+	to_char(order_date, 'YYYY-MM')
+order by
+	1;
+
+    
