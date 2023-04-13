@@ -17,6 +17,8 @@
 
 C SQL получилось решить то, что не получалось красиво сделать в экселе (до некрасивого решения я так и не добралась)). В экселе я для подсчёта процента роста/уменьшения прибыли и других показателей использовала вычисляемое поле сводной таблицы, которое по неизвестным мне причинам знаменатель берёт не по модулю, таким образом расчёт получается в корне неправильным в том случае, если к примеру была отрицательная прибыль. В общем, с SQL это всё решается одним оператором.
 
+Решила использовать оконные функции и CTE, пока не разобралась, что лучше: две CTE или CTE и подзапрос, как у меня получилось (случайно, но потом уже не стала переделывать, хотя с двумя CTE по-моему как минимум читается проще). 
+
 #### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
@@ -62,6 +64,51 @@ group by
 order by
 	1,2;
 ```
-**Остальные KPI (*Sales, Orders, Average discount, Customers, Sales per customer*) считаются аналогично, просто заменяем названия столбцов в основном селекте**
+**Другие KPI (*Sales, Average discount*) считаются аналогично, просто заменяем названия столбцов в основном селекте**
 
-Ну вот только для *Orders* и *Sales per customer* будет немного другое вычисление. 
+Для *Orders*, *Sales per customer* и *Sales per customer* пришлось отказаться от оконных функций, ибо там не работает оператор COUNT DISTINCT (ну или по крайней мере бобёр на меня ругнулся именно так). 
+
+```sql
+with order_current AS
+	(select 
+			extract(year from order_date) as order_year,
+			extract(month from order_date) as order_month,
+			to_char(order_date, 'YYYY-MM') as order_year_month,
+			count(distinct order_id) as order_count
+		from 
+			public.orders
+	group by 
+		order_year,
+		order_month,
+		order_year_month),
+	order_prev as	
+	(select 
+			extract(year from order_date) as order_year,
+			extract(month from order_date) as order_month,
+			to_char(order_date, 'YYYY-MM') as order_year_month,
+			count(distinct order_id) as order_count
+		from 
+			public.orders
+	group by 
+		order_year,
+		order_month,
+		order_year_month)
+select
+	order_current.order_year_month,
+	SUM(order_current.order_count) - SUM(order_prev.order_count) as order_yoy,
+	ROUND((SUM(order_current.order_count) - SUM(order_prev.order_count))/order_prev.order_count*100, 2) as percent_diff
+from
+	order_current
+left join
+	order_prev
+on
+	order_prev.order_year = order_current.order_year - 1 
+	and
+	order_prev.order_month = order_current.order_month
+group by
+	order_current.order_year_month,
+	order_prev.order_year_month,
+	order_prev.order_count
+order by 
+	order_current.order_year_month;
+	```
