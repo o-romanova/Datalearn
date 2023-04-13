@@ -2,7 +2,7 @@
 
 Изначально хотела пройти этот модуль с минимальными знаниями SQL, которые успела нахватать не вполне последовательно, решая упражнения на https://sql-ex.ru/ (на момент ноября 2022 года знаний по SQL был ноль). Но, как ни странно, уткнувшись во что-то в установке DBeaver (причём, уже не знаю, что не взлетело, так как потом без проблем всё подключила), решила, что нужна хотя бы чуть более основательная база. 
 
-Прошла 2 c небольшим модуля [курса по SQL](https://datalearn.ru/kurs-po-sql) тут же на Datalearn. Очень крутой курс, спасибо большое ребятам! Кстати, а чего его нет в списке дополнительных материалов для обучения в этом модуле? Я вот из телеграм чата про него прочитала (не обратила внимание на сайте). Дополировала [интерактивным тренажёром на Stepik](https://stepik.org/course/63054/), чуть лучше некоторые вещи уложились в голове. Планирую добить до конца оба курса, но пока решила разнообразить другими задачами. 
+Прошла 2 c небольшим модуля [курса по SQL](https://datalearn.ru/kurs-po-sql) тут же на Datalearn. Очень крутой курс, спасибо большое ребятам! Кстати, а чего его нет в списке дополнительных материалов для обучения в этом модуле? Я вот из телеграм чата про него прочитала (не обратила внимание на сайте). Дополировала [интерактивным тренажёром на Stepik](https://stepik.org/course/63054/), чуть лучше некоторые вещи уложились в голове. Планирую добить до конца оба курса, но пока решила разнообразить другими задачами. И ещё поняла, что надо почитать или пройти курс на английском, чтобы не плавать в терминологии на английском.
 
 В процессе курса Анатолия немного потрогала pgAdmin, сейчас погоняла DBeaver. 
 
@@ -22,9 +22,10 @@ C SQL получилось решить то, что не получалось �
 #### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
--- profit per month compared to the same month of the previous year (Year over year comparison)
+-- Profit per month compared to the same month of the previous year (Year over year comparison). Shows change in dollars and in percent.
 
-	-- CTE calculates profit for the current year (by month) and extracts year and month from the order date
+/*CTE calculates profit by month and extracts year and month from the order date for using in window function and join clause in the main SELECT statement. 
+* I decided to use window functions in order to avoid the GROUP BY clause in the CTE */
 
 with current_year AS
 	(select 
@@ -34,12 +35,10 @@ with current_year AS
 		sum(profit) over(partition by to_char(order_date, 'YYYY-MM')) as current_profit
 	from 
 		public.orders)
-	-- select the current year data and join it with basically the same table but using year-1 (thus, same month, but previous year), do the calculations
+		
+-- select the current year data from CTE and join it with basically the same table (from subquery) but using year-1 (thus, same month, but previous year), then do the calculations
 select
-	current_year.order_year,
-	current_year.order_month,
-	current_year.current_profit,
-	prev_year.prev_profit,
+	current_year.order_year_month,
 	ROUND(current_year.current_profit - prev_year.prev_profit, 2) as profit_YoY,
 	ROUND((current_year.current_profit - prev_year.prev_profit) / ABS(prev_year.prev_profit) * 100) as percent_diff
 from
@@ -57,8 +56,7 @@ ON
 	and
 	prev_year.order_month = current_year.order_month
 group by 
-	current_year.order_year,
-	current_year.order_month,
+	current_year.order_year_month,
 	current_year.current_profit,
 	prev_year.prev_profit
 order by
@@ -68,7 +66,14 @@ order by
 
 Для *Orders*, *Sales per customer* и *Sales per customer* пришлось отказаться от оконных функций, ибо там не работает оператор COUNT DISTINCT (ну или по крайней мере бобёр на меня ругнулся именно так). 
 
+#### Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
+
 ```sql
+-- Number of orders per month compared to the same month of the previous year (Year over year comparison). Shows change in order number and in percent.
+
+/* Two CTEs are identical, they count orders (by month) and extract year and month from the order date to be used in the join clause. 
+ * I had to use group by clause instead of window functions as COUNT DISTINCT function is not implemented in window functions */
+
 with order_current AS
 	(select 
 			extract(year from order_date) as order_year,
@@ -93,6 +98,8 @@ with order_current AS
 		order_year,
 		order_month,
 		order_year_month)
+		
+-- here, we select the columns from CTEs above and join two tables on year and month but using year-1 (thus, same month, but previous year), then do the calculations
 select
 	order_current.order_year_month,
 	SUM(order_current.order_count) - SUM(order_prev.order_count) as order_yoy,
