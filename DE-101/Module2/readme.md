@@ -22,10 +22,12 @@ C SQL получилось решить то, что не получалось �
 #### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
--- Profit per month compared to the same month of the previous year (Year over year comparison). Shows change in dollars and in percent.
+/*Profit per month compared to the same month of the previous year (Year over year comparison). 
+ * Shows change in dollars and in percent.*/
 
-/*CTE calculates profit by month and extracts year and month from the order date for using in window function and join clause in the main SELECT statement. 
-* I decided to use window functions in order to avoid the GROUP BY clause in the CTE */
+/*CTE calculates profit by month and extracts year and month from the order date for using in window function 
+ * and join clause in the main SELECT statement. 
+ * I decided to use window functions in order to avoid the GROUP BY clause in the CTE */
 
 with current_year AS
 	(select 
@@ -36,9 +38,11 @@ with current_year AS
 	from 
 		public.orders)
 		
--- select the current year data from CTE and join it with basically the same table (from subquery) but using year-1 (thus, same month, but previous year), then do the calculations
+/* select the current year data from CTE and join it with basically the same table (from subquery) but using year-1
+ * (thus, same month, but previous year), then do the calculations*/
 select
 	current_year.order_year_month,
+	ROUND(current_year.current_profit, 2) as profit,
 	ROUND(current_year.current_profit - prev_year.prev_profit, 2) as profit_YoY,
 	ROUND((current_year.current_profit - prev_year.prev_profit) / ABS(prev_year.prev_profit) * 100) as percent_diff
 from
@@ -62,14 +66,16 @@ group by
 order by
 	1,2;
 ```
-**Другие KPI (*Sales, Average discount*) считаются аналогично, просто заменяем названия столбцов в основном селекте**
+Другие KPI (*Sales, Average discount*) считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте.
 
 Для *Orders*, *Sales per customer* и *Sales per customer* пришлось отказаться от оконных функций, ибо там не работает оператор COUNT DISTINCT (ну или по крайней мере бобёр на меня ругнулся именно так). 
+
 
 #### Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
--- Number of orders per month compared to the same month of the previous year (Year over year comparison). Shows change in order number and in percent.
+/* Number of orders per month compared to the same month of the previous year (Year over year comparison). 
+ * Shows change in order number and in percent.*/
 
 /* Two CTEs are identical, they count orders (by month) and extract year and month from the order date to be used in the join clause. 
  * I had to use group by clause instead of window functions as COUNT DISTINCT function is not implemented in window functions */
@@ -99,9 +105,11 @@ with order_current AS
 		order_month,
 		order_year_month)
 		
--- here, we select the columns from CTEs above and join two tables on year and month but using year-1 (thus, same month, but previous year), then do the calculations
+/* here, we select the columns from CTEs above and join two tables on year and month but using year-1 
+ * (thus, same month, but previous year), then do the calculations*/
 select
 	order_current.order_year_month,
+	order_current.order_count,
 	SUM(order_current.order_count) - SUM(order_prev.order_count) as order_yoy,
 	ROUND((SUM(order_current.order_count) - SUM(order_prev.order_count))/order_prev.order_count*100, 2) as percent_diff
 from
@@ -115,7 +123,9 @@ on
 group by
 	order_current.order_year_month,
 	order_prev.order_year_month,
+	order_current.order_count,
 	order_prev.order_count
 order by 
 	order_current.order_year_month;
 	```
+	
