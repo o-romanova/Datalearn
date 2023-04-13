@@ -66,6 +66,7 @@ group by
 order by
 	1,2;
 ```
+
 Другие KPI (*Sales, Average discount*) считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте.
 
 Для *Orders*, *Sales per customer* и *Sales per customer* пришлось отказаться от оконных функций, ибо там не работает оператор COUNT DISTINCT (ну или по крайней мере бобёр на меня ругнулся именно так). 
@@ -127,5 +128,64 @@ group by
 	order_prev.order_count
 order by 
 	order_current.order_year_month;
-	```
-	
+```
+
+### Смотрим остальные показатели 
+В разных запросах показала разные фильтры, так надо от конкретной задачи отталкиваться, конечно.
+
+#### Продажи по штатам
+```sql
+--Sales by state
+select
+	state,
+	SUM(sales) as sales_sum
+from
+	public.orders
+group by
+	state,
+	order_date 
+--filter by year-month
+	having 
+	to_char(order_date, 'YYYY-MM') = '2017-01'
+order by
+	sales_sum desc
+```
+
+#### Динамика прибыли
+```sql
+--Profit dynamics	
+select
+	extract(year from order_date) as order_year,
+	to_char(order_date, 'YYYY-MM') as order_year_month,
+	ROUND(sum(profit), 2) as profit_sum
+from 
+	public.orders
+group by 
+	order_year,	
+	order_year_month
+having extract(year from order_date) = 2019
+order by
+	order_year_month;	
+```
+
+#### Продажи и прибыль по категориям и подкатегориям
+```sql
+--Sales and profit by product category and subcategory
+select
+	to_char(order_date, 'YYYY-MM') as order_year_month,	
+	category,
+	subcategory,
+	ROUND(SUM(sales), 2) as sales_sum,
+	ROUND(SUM(profit), 2) as profit_sum
+from 
+	public.orders
+group by
+	category,
+	subcategory,
+	order_year_month
+having 
+	to_char(order_date, 'YYYY-MM') = '2019-03'
+order by
+	category,
+	profit_sum;
+```

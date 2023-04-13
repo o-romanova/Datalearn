@@ -43,6 +43,6 @@
 ![1 страница Yearly dashboard](DashboardYearly-1.png)
 ![1 страница Yearly dashboard](DashboardYearly-2.png)
 
-Сам файл можно скачать [тут же](DashboardOR-Superstore-v7.xlsx). 
+Сам файл можно скачать [тут же](DashboardOR-Superstore-v8.xlsx). 
 
 [Обратно в начало репозитория	:leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
