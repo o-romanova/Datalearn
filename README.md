@@ -4,7 +4,7 @@
 Всем привет! 
 Тут будут жить [задания](https://github.com/Bigdataworm/Datalearn/tree/main/DE-101) в рамках курса *"Getting Started with Data Engineering and Analytics"*
 1. [DE-101/Module-01](https://github.com/Bigdataworm/Datalearn/tree/main/DE-101/Module1)
-2. DE-101/Module-02
+2. [DE-101/Module-02](https://github.com/Bigdataworm/Datalearn/blob/main/DE-101/Module2/readme.md)
 
 Я планирую после этого и возможно ещё какого-то более узконаправленного курса(ов) сменить сферу деятельности для начала в BI Developer, а потом посмотрим :) 
 На данный момент я знакома с областью Data Engineering и Analytics из своей работы в Marketing Communications в двух международных организациях. В общей сложности порядка 15 лет занимаюсь Integrated Marketing Communications во всех их проявлениях от PR, event management, video production до анализа рынка. 

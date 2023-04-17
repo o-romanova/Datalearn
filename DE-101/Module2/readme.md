@@ -237,3 +237,5 @@ order by
 	SUM(profit) DESC;
 ```
 Ну и так далее. Остальное, что я реализовала в экселе, делается аналогично. 
+
+[Обратно в начало репозитория :leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
