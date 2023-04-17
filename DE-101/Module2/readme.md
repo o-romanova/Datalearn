@@ -133,22 +133,30 @@ order by
 ### Смотрим остальные показатели 
 В разных запросах показала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
 
-#### Продажи по штатам
+#### Отменённые продажи по штатам (смотрим продажи, где заказ был отменён, плюс фильтр по году)
 ```sql
---Sales by state
+--Cancelled orders by state and filtered by year. 
+-- i.e. sales by state where the order was returned filtered by year.
 select
 	state,
-	SUM(sales) as sales_sum
+	SUM(sales) as sales_sum_state,
+	COUNT(returned)
 from
 	public.orders
+left join
+	public."returns"
+on orders.order_id = "returns".order_id
 group by
 	state,
-	order_date 
---filter by year-month
+	order_date,
+	"returns".returned
+--filter by year-month and if the order was returned
 	having 
-	to_char(order_date, 'YYYY-MM') = '2017-01'
+		extract(year from order_date) = '2017'
+		and 
+		returned is not NULL
 order by
-	sales_sum desc
+	sales_sum_state desc;
 ```
 
 #### Динамика прибыли
@@ -228,3 +236,4 @@ group by
 order by
 	SUM(profit) DESC;
 ```
+Ну и так далее. Остальное, что я реализовала в экселе, делается аналогично. 
