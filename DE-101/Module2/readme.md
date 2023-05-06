@@ -6,7 +6,7 @@
 
 В процессе курса Анатолия немного потрогала pgAdmin, сейчас погоняла DBeaver. 
 
-Для загрузки данных из БД Superstore использовала готовые sql файлы, хотя надо бы потом будет попробовать импорт средствами бобра хотя бы. 
+Для загрузки данных из БД Superstore использовала готовые sql файлы, хотя надо бы потом будет попробовать импорт средствами бобра например. Сразу же изменила тип данных в postal_code на varchar, иначе потом криво добавляется недостающий индекс (исчезает первый ноль). 
 
 В запросах комментарии на английском, потому как мало ли решу использовать для "портфолио". 
 
@@ -67,9 +67,9 @@ order by
 	1,2;
 ```
 
-Другие KPI (*Sales, Average discount*) считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте.
+Другие KPI (`Sales`, `Average discount`) считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте.
 
-Для *Orders*, *Sales per customer* и *Sales per customer* пришлось отказаться от оконных функций, ибо там не работает оператор COUNT DISTINCT (ну или по крайней мере бобёр на меня ругнулся именно так). 
+Для `Orders`, `Customers` и `Sales per customer` пришлось отказаться от оконных функций, ибо там не работает оператор `COUNT DISTINCT` (ну или по крайней мере бобёр на меня ругнулся именно так). 
 
 
 #### Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
@@ -133,28 +133,30 @@ order by
 ### Смотрим остальные показатели 
 В разных запросах показала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
 
-#### Отменённые продажи по штатам (смотрим продажи, где заказ был отменён, плюс фильтр по году)
+#### Упущенная прибыль по штатам (смотрим продажи, где заказ был отменён, плюс фильтр по году)
 ```sql
---Cancelled orders by state and filtered by year. 
--- i.e. sales by state where the order was returned filtered by year.
+--Lost profit
+--Returned orders by state and filtered by year
 select
 	state,
-	SUM(sales) as sales_sum_state,
-	COUNT(returned)
+	SUM(sales) as returned_sales_sum,
+	COUNT(returned) as returned_order_count
 from
-	public.orders
-left join
-	public."returns"
-on orders.order_id = "returns".order_id
+	public.orders as o
+join
+	(select
+		distinct order_id,
+		returned
+	from
+		public."returns") as r
+on o.order_id = r.order_id
 group by
 	state,
 	order_date,
-	"returns".returned
+	r.returned
 --filter by year-month and if the order was returned
 	having 
 		extract(year from order_date) = '2017'
-		and 
-		returned is not NULL
 order by
 	sales_sum_state desc;
 ```
@@ -237,5 +239,19 @@ order by
 	SUM(profit) DESC;
 ```
 Ну и так далее. Остальное, что я реализовала в экселе, делается аналогично. 
+
+## Модель данных
+Для построения модели данных использовала [SqlDBM](https://sqldbm.com) и функцию forward engineering для создания таблиц.
+
+![Физическая модель данных](data_model_superstoredb.png)
+
+Немного изменила структуру данных - добавила таблицы-`dimensions`: 
+- `calendar` использует генерируемые даты в заданном интервале;
+- `geography` содержит всякие пространственные данные;
+- отдельно вынесла `discount` для упрощения ввода скидочных программ и пр;
+- возвраты тоже вынесены отдельно в `order_status`, теоретически могут добавляться другие характеристики заказа. 
+
+
+Скрипт можно посмотреть тут. Может быть незначительное расхождение со схемой, я редактировала скрипт уже по ходу.
 
 [Обратно в начало репозитория :leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
