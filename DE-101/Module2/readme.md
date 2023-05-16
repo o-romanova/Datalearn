@@ -6,28 +6,27 @@
 
 В процессе курса Анатолия немного потрогала pgAdmin, сейчас погоняла DBeaver. 
 
-Для загрузки данных из БД Superstore использовала готовые sql файлы, хотя надо бы потом будет попробовать импорт средствами бобра например. Сразу же изменила тип данных в postal_code на varchar, иначе потом криво добавляется недостающий индекс (исчезает первый ноль). 
+Для загрузки данных из БД Superstore использовала готовые sql файлы, хотя надо бы потом будет попробовать импорт средствами бобра например. Сразу же изменила тип данных в postal_code на varchar, иначе потом криво добавляется недостающий индекс (исчезает первый ноль). Скрипт Returns аналогично тому, что Дима показывал в видео, редактировала на ходу, причём два раза, оба забыла сохранить, чтобы предложить правки в курс. Но вообще, если честно, так даже по-моему эффективнее тренировать.
 
 В запросах комментарии на английском, потому как мало ли решу использовать для "портфолио". 
 
-## SQL запросы на основе экселевского дашборда
+## 1. SQL ЗАПРОСЫ НА ОСНОВЕ ЭКСЕЛЕВСКОГО ДАШБОРДА
 
-### Считаем KPI в виде Year-over-year
+### 1.1 Считаем KPI в виде Year-over-year
 Решила повторить то, что [делала в экселе в первом модуле](https://github.com/Bigdataworm/Datalearn/blob/main/DE-101/Module1/Readme.md).
 
 C SQL получилось решить то, что не получалось красиво сделать в экселе (до некрасивого решения я так и не добралась)). В экселе я для подсчёта процента роста/уменьшения прибыли и других показателей использовала вычисляемое поле сводной таблицы, которое по неизвестным мне причинам знаменатель берёт не по модулю, таким образом расчёт получается в корне неправильным в том случае, если к примеру была отрицательная прибыль. В общем, с SQL это всё решается одной функцией.
 
-Решила использовать оконные функции и CTE, пока не разобралась, что лучше: две CTE или CTE и подзапрос, как у меня получилось (случайно, но потом уже не стала переделывать, хотя с двумя CTE по-моему как минимум читается проще). 
+Решила использовать оконные функции и CTE, пока до конца не разобралась, что лучше: две CTE или CTE и подзапрос, как у меня получилось (случайно, но потом уже не стала переделывать, хотя с двумя CTE по-моему как минимум читается проще).
 
-#### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
+#### 1.1.1 Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
 /*Profit per month compared to the same month of the previous year (Year over year comparison). 
  * Shows change in dollars and in percent.*/
 
 /*CTE calculates profit by month and extracts year and month from the order date for using in window function 
- * and join clause in the main SELECT statement. 
- * I decided to use window functions in order to avoid the GROUP BY clause in the CTE */
+ * and join clause in the main SELECT statement. */
 
 with current_year AS
 	(select 
@@ -72,14 +71,13 @@ order by
 Для `Orders`, `Customers` и `Sales per customer` пришлось отказаться от оконных функций, ибо там не работает оператор `COUNT DISTINCT` (ну или по крайней мере бобёр на меня ругнулся именно так). 
 
 
-#### Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
+#### 1.1.2 Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
 /* Number of orders per month compared to the same month of the previous year (Year over year comparison). 
  * Shows change in order number and in percent.*/
 
-/* Two CTEs are identical, they count orders (by month) and extract year and month from the order date to be used in the join clause. 
- * I had to use group by clause instead of window functions as COUNT DISTINCT function is not implemented in window functions */
+/* Two CTEs are identical, they count orders (by month) and extract year and month from the order date to be used in the join clause. */
 
 with order_current AS
 	(select 
@@ -130,10 +128,10 @@ order by
 	order_current.order_year_month;
 ```
 
-### Смотрим остальные показатели 
+### 1.2 Смотрим остальные показатели 
 В разных запросах показала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
 
-#### Упущенная прибыль по штатам (смотрим продажи, где заказ был отменён, плюс фильтр по году)
+#### 1.2.1 Упущенная прибыль по штатам (смотрим продажи, где заказ был отменён, плюс фильтр по году)
 ```sql
 --Lost profit
 --Returned orders by state and filtered by year
@@ -161,7 +159,7 @@ order by
 	sales_sum_state desc;
 ```
 
-#### Динамика прибыли
+#### 1.2.2 Динамика прибыли
 ```sql
 --Profit dynamics	
 select
@@ -179,7 +177,7 @@ order by
 	order_year_month;	
 ```
 
-#### Продажи и прибыль по категориям и подкатегориям
+#### 1.2.3 Продажи и прибыль по категориям и подкатегориям
 ```sql
 --Sales and profit by product category and subcategory
 select
@@ -202,7 +200,7 @@ order by
 	profit_sum;
 ```
 
-####  Топ-10 продуктов по прибыли
+####  1.2.4Топ-10 продуктов по прибыли
 ```sql
 --Top 10 product by profit
 select
@@ -221,7 +219,7 @@ order by
 limit 
 	10;	
 ```
-#### Рейтинг менеджеров по прибыли
+#### 1.2.5 Рейтинг менеджеров по прибыли
 ```sql
 --Region managers by profit
 select 
@@ -240,18 +238,24 @@ order by
 ```
 Ну и так далее. Остальное, что я реализовала в экселе, делается аналогично. 
 
-## Модель данных
+## 2. МОДЕЛЬ ДАННЫХ
 Для построения модели данных использовала [SqlDBM](https://sqldbm.com) и функцию forward engineering для создания таблиц.
 
 ![Физическая модель данных](data_model_superstoredb.png)
 
 Немного изменила структуру данных - добавила таблицы-`dimensions`: 
 - `calendar` использует генерируемые даты в заданном интервале;
-- `geography` содержит всякие пространственные данные;
 - отдельно вынесла `discount` для упрощения ввода скидочных программ и пр;
 - возвраты тоже вынесены отдельно в `order_status`, теоретически могут добавляться другие характеристики заказа. 
 
 
-Скрипт можно посмотреть тут. Может быть незначительное расхождение со схемой, я редактировала скрипт уже по ходу.
+Скрипт можно посмотреть [тут](dw_superstore.sql). Может быть незначительное расхождение со схемой, я редактировала скрипт уже по ходу.
+
+## 3. БАЗА ДАННЫХ В ОБЛАКЕ
+Подключилась к AWS RDS с помощью [этой инструкции](https://github.com/Data-Learn/data-engineering/blob/master/how-to/how_to_amazon_rds.md), включая настройку доступа назначенным ip, так как сильно затупила и не смогла подключиться к AWS Lightsail, хотя на стороне AWS всё сделала правильно. Пока искала, в чём моя ошибка, попутно разобралась чуть лучше в разных сервисах AWS.
+
+А ошибка была вот в чём: я в DBeaver пыталась подключаться через URL 
+
+![скриншот подключения DBeaver](DBeaver-AWS_RDS-connect.png)
 
 [Обратно в начало репозитория :leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
