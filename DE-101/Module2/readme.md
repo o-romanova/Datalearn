@@ -61,6 +61,8 @@ group by
 order by
 	1,2;
 ```
+Результат 
+![profit monthly yoy](profit_montly_yoy.png)
 
 Другие KPI считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте. Я для разнообразия немного разными способами написала запросы.
  
@@ -83,13 +85,14 @@ FROM orders
 GROUP BY EXTRACT(year FROM order_date)
 ORDER BY EXTRACT(year FROM order_date);
 ```
-
+Результат 
+![kpi yearly](kpi-yearly.png)
 ### 1.2 Смотрим остальные показатели 
 В разных запросах потренировала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
 
-#### 1.2.1 Упущенная прибыль по штатам за 2017 год (смотрим продажи, где заказ был отменён, плюс фильтр по году)
+#### 1.2.1 Упущенная прибыль по штатам (смотрим продажи, где заказ был отменён)
 ```sql
-/* Lost profit. Returned orders by state and filtered by year */
+/* Lost profit. Returned orders by state */
 
 select
 	state,
@@ -106,29 +109,30 @@ join
 on o.order_id = r.order_id
 group by
 	state,
-	order_date,
 	r.returned
---filter by year-month and if the order was returned
-	having 
-		extract(year from order_date) = '2017'
 order by
 	returned_sales_sum desc;
 ```
+Результат
+![lost profit by state](lost_profit_by_state.png)
 
 #### 1.2.2 Динамика прибыли
 ```sql
+/* Profit dynamics */
 select
 	extract(year from order_date) as order_year,
-	to_char(order_date, 'YYYY-MM') as order_year_month,
+	--to_char(order_date, 'YYYY-MM') as order_year_month,
 	ROUND(sum(profit), 2) as profit_sum
 from 
 	public.orders
 group by 
-	order_year,	
-	order_year_month
+	order_year	
+	--order_year_month
 order by
-	order_year_month;	
+	order_year;		
 ```
+Результат
+![profit dynamics](profit_dynamics.png)
 
 ####  1.2.3 Топ-10 продуктов по прибыли
 ```sql
@@ -149,6 +153,8 @@ order by
 limit 
 	10;		
 ```
+Результат
+![top 10 products by profit](top_10_products_profit.png)
 
 Ну и так далее. Скрипт с несколькими оставшимися показателями можно посмотреть [тут](DE-101/Module2/from_stg_to_dw_superstore.sql)
 
