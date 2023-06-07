@@ -10,14 +10,14 @@
 
 ## 1. SQL ЗАПРОСЫ НА ОСНОВЕ ЭКСЕЛЕВСКОГО ДАШБОРДА
 
-### 1.1 Считаем KPI в виде Year-over-year
+### 1.1 Считаем KPI
 Решила повторить то, что [делала в экселе в первом модуле](https://github.com/Bigdataworm/Datalearn/blob/main/DE-101/Module1/Readme.md).
 
 C SQL получилось решить то, что не получалось красиво сделать в экселе (до некрасивого решения я так и не добралась)). В экселе я для подсчёта процента роста/уменьшения прибыли и других показателей использовала вычисляемое поле сводной таблицы, которое по неизвестным мне причинам знаменатель берёт не по модулю, таким образом расчёт получается в корне неправильным в том случае, если к примеру была отрицательная прибыль. В общем, с SQL это всё решается просто.
 
 Решила использовать оконные функции и CTE, пока до конца не разобралась, что лучше: две CTE или CTE и подзапрос, как у меня получилось (случайно, но потом уже не стала переделывать, хотя с двумя CTE по-моему как минимум читается проще).
 
-#### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
+#### 1.1.1. Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
 /*Profit per month compared to the same month of the previous year (Year over year comparison)*/
@@ -64,7 +64,25 @@ order by
 
 Другие KPI считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте. Я для разнообразия немного разными способами написала запросы.
  
+ #### 1.1.2. Изменение KPI по годам
+ 
+ ```sql
+ --Yearly KPI change, change is shown in percent
 
+SELECT
+	EXTRACT(year FROM order_date) AS year,
+	ROUND(SUM(profit), 1) AS profit,
+	ROUND((SUM(profit) / LAG(SUM(profit)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS profit_change,
+	ROUND(SUM(sales), 1) AS sales,
+	ROUND((SUM(sales) / LAG (SUM(sales)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS sales_change,
+	COUNT(distinct order_id) AS orders,
+	ROUND((count(distinct order_id)::numeric / LAG(count(distinct order_id)::numeric) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS orders_change,
+	ROUND(SUM(profit)/SUM(sales) *100, 1) AS profit_margin,
+	ROUND(((SUM(profit)/SUM(sales)) / LAG(SUM(profit)/SUM(sales)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS profit_margin_change
+FROM orders
+GROUP BY EXTRACT(year FROM order_date)
+ORDER BY EXTRACT(year FROM order_date); 
+```
 
 ### 1.2 Смотрим остальные показатели 
 В разных запросах потренировала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
