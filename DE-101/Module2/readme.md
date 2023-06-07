@@ -13,11 +13,11 @@
 ### 1.1 Считаем KPI в виде Year-over-year
 Решила повторить то, что [делала в экселе в первом модуле](https://github.com/Bigdataworm/Datalearn/blob/main/DE-101/Module1/Readme.md).
 
-C SQL получилось решить то, что не получалось красиво сделать в экселе (до некрасивого решения я так и не добралась)). В экселе я для подсчёта процента роста/уменьшения прибыли и других показателей использовала вычисляемое поле сводной таблицы, которое по неизвестным мне причинам знаменатель берёт не по модулю, таким образом расчёт получается в корне неправильным в том случае, если к примеру была отрицательная прибыль. В общем, с SQL это всё решается одной функцией.
+C SQL получилось решить то, что не получалось красиво сделать в экселе (до некрасивого решения я так и не добралась)). В экселе я для подсчёта процента роста/уменьшения прибыли и других показателей использовала вычисляемое поле сводной таблицы, которое по неизвестным мне причинам знаменатель берёт не по модулю, таким образом расчёт получается в корне неправильным в том случае, если к примеру была отрицательная прибыль. В общем, с SQL это всё решается просто.
 
 Решила использовать оконные функции и CTE, пока до конца не разобралась, что лучше: две CTE или CTE и подзапрос, как у меня получилось (случайно, но потом уже не стала переделывать, хотя с двумя CTE по-моему как минимум читается проще).
 
-#### 1.1.1 Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
+#### Прибыль по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
 
 ```sql
 /*Profit per month compared to the same month of the previous year (Year over year comparison)*/
@@ -36,9 +36,9 @@ with current_year AS
 		
 select
 	current_year.order_year_month,
-	ROUND(current_year.current_profit, 2) as profit,
-	ROUND(current_year.current_profit - prev_year.prev_profit, 2) as profit_YoY,
-	ROUND((current_year.current_profit - prev_year.prev_profit) / ABS(prev_year.prev_profit) * 100) as percent_diff
+	ROUND(current_year.current_profit, 2) as current_profit,
+	ROUND(prev_year.prev_profit, 2) as prev_profit,
+	ROUND((current_year.current_profit / prev_year.prev_profit - 1) * 100) as percent_diff
 from
 	current_year
 -- join data from CTE with the same table (from subquery) but using year-1
@@ -62,67 +62,9 @@ order by
 	1,2;
 ```
 
-Другие KPI (`Sales`, `Average discount`) считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте.
+Другие KPI считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте. Я для разнообразия немного разными способами написала запросы.
+ 
 
-Для `Orders`, `Customers` и `Sales per customer` пришлось отказаться от оконных функций и использовать group by (не всегда люблю это дело), ибо там не работает оператор `COUNT DISTINCT` (ну или по крайней мере бобёр на меня ругнулся именно так). 
-
-
-#### 1.1.2 Количество заказов по месяцам в сравнении с аналогичным месяцем предыдущего года (Year-over-year) 
-
-```sql
-/* Number of orders per month compared to the same month of the previous year (Year over year comparison) */
-
---Two CTEs are identical, they count orders (by month) and extract year and month 
---from the order date to be used in the join clause.
-
-with order_current AS
-	(select 
-			extract(year from order_date) as order_year,
-			extract(month from order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count(distinct order_id) as order_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month),
-		
-	order_prev as	
-	(select 
-			extract(year from order_date) as order_year,
-			extract(month from order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count(distinct order_id) as order_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month)
-
-select
-	order_current.order_year_month,
-	order_current.order_count,
-	SUM(order_current.order_count) - SUM(order_prev.order_count) as order_yoy,
-	ROUND((SUM(order_current.order_count) - SUM(order_prev.order_count))/order_prev.order_count*100, 2) as percent_diff
-from
-	order_current
--- join two tables on year and month but using year-1 
-left join
-	order_prev
-on
-	order_prev.order_year = order_current.order_year - 1 
-	and
-	order_prev.order_month = order_current.order_month
-group by
-	order_current.order_year_month,
-	order_prev.order_year_month,
-	order_current.order_count,
-	order_prev.order_count
-order by 
-	order_current.order_year_month;
-```
 
 ### 1.2 Смотрим остальные показатели 
 В разных запросах потренировала разные фильтры/группировки, так надо от конкретной задачи отталкиваться, конечно.
@@ -203,7 +145,11 @@ limit
 - возвраты тоже вынесены отдельно в `order_status`, теоретически могут добавляться другие характеристики заказа. 
 
 
-Скрипт можно посмотреть [тут](from_stg_to_dw_superstore.sql). Может быть незначительное расхождение со схемой, я редактировала скрипт уже по ходу. Ещё удалила всякие индексы, которые предлагал SqlDBM (с ними знакома пока только по касательной).
+Скрипт создания таблиц и загрузки данных можно посмотреть [тут](from_stg_to_dw_superstore.sql). Может быть незначительное расхождение со схемой, я редактировала скрипт уже по ходу, могла забыть что-то обновить в модели. Ещё удалила всякие индексы, которые предлагал SqlDBM (с ними знакома пока только по касательной).
+
+После обсуждения [домашки Юрия](https://github.com/yuriizd/DataLearnDE/blob/main/DE-101/Module2/README.md) выяснилось, что из-за того, что я поленилась подумать и создала primary key в product_dim, а не оставила `product_id`, не увидела дубликатов `product_id`, данные, соответственно, по-хорошему надо чистить. Но мне уже хотелось двигаться дальше. Если что, у Юрия есть подробное описание со скриптами.
+
+Вообще, конечно, правильнее было не генерить лишних сущностей в виде cust_id и prod_id. 
 
 ## 3. БАЗА ДАННЫХ В ОБЛАКЕ
 Подключилась к AWS RDS с помощью [этой инструкции](https://github.com/Data-Learn/data-engineering/blob/master/how-to/how_to_amazon_rds.md), включая настройку доступа назначенным ip, так как сильно затупила и не смогла подключиться к AWS Lightsail, хотя на стороне AWS всё сделала правильно. Пока искала, в чём моя ошибка, попутно разобралась чуть лучше в разных сервисах AWS.
@@ -218,14 +164,15 @@ limit
 
 Честно говоря, не помню, получалось ли у меня хоть раз так легко и просто что-нибудь сделать, как Дмитрий в видео показывает. Long story short, на момент мая 2023 года Looker не умеет в PostgreSQL 15.2. Называется, не выпендривайтесь и соглашайтесь на дефолтные значения. С 14.6 всё получилось. 
 
-Но тут же я уткнулась в следующую проблему: аггрегированные данные отображались неправильно или вообще не показывались при фильтрации по датам. Выяснилось, что то ли я не досмотрела предложенные лукером типы данных, то ли сама что-то натыкала и не осознала, но в общем, в дате заказа был выбран 'year' вместо 'date'. Аналогичная проблема получилась с average discount, надо было выбрать 'percent'. Вывод: внимательнее к типам данных.
+Но тут же я уткнулась в следующую проблему: агрегированные данные отображались неправильно или вообще не показывались при фильтрации по датам. Выяснилось, что то ли я не досмотрела предложенные лукером типы данных, то ли сама что-то натыкала и не осознала, но в общем, в дате заказа был выбран 'year' вместо 'date'. Аналогичная проблема получилась с average discount, надо было выбрать 'percent'. Вывод: внимательнее к типам данных. Или к чему-то ещё... В какой-то момент опять стали отображаться не те цифры, опять пофиксилось перевыбором нужного типа данных у order_date. 
 
 В поиске идей, как интереснее всего посмотреть на функционал Looker Studio, вспомнила про давно полюбившийся ещё по экселю [канал Николая Валиотти](https://www.youtube.com/@NikolayValiottiLEFTJOIN), оказалось, что у них и по [Лукеру есть видео](https://youtu.be/GVJdt5nvhjM). Вдохновилась и по традиции нашла пачку багов Looker Studio. О них подробнее под скриншотами получившегося дашборда.
+
 ![Superstore dashboard in Looker studio 1](Looker_superstore_dashboard_1.png)
 ![Superstore dashboard in Looker studio 2](Looker_superstore_dashboard_2.png)
 [Интерактивный дашборд тык](https://lookerstudio.google.com/reporting/9ec0ba74-5d20-4996-b697-36314a874d58)
 
-Оговорюсь, что внешним видом я не довольна. У меня всегда была команда дизайнеров, а самой надо всему ещё учиться (или аутсорсить как и раньше). Да и по содержанию дашборда есть ещё, над чем работать. У меня в голове так и не образовалось чёткой картины, для кого должен быть этот дашборд, пока он, возможно, слишком гибкий. Большинству пользователей по моему опыту не нужно столько гибкости, надо бы сильнее отфильтровать. Например, как [тут](https://public.tableau.com/app/profile/joris.van.den.berg/viz/SunCycleSalesDashboard/SunCycleSalesDashboard). Сейчас отчёт больше под меня сделан.
+Оговорюсь, что внешним видом я недовольна. У меня всегда была команда дизайнеров, а самой надо всему ещё учиться, если решу в ту сторону развиваться (или аутсорсить как и раньше). Да и по содержанию дашборда есть ещё, над чем работать. У меня в голове так и не образовалось чёткой картины, для кого должен быть этот дашборд, пока он, возможно, слишком гибкий. Большинству пользователей по моему опыту не нужно столько гибкости, надо бы сильнее отфильтровать. Например, как [тут](https://public.tableau.com/app/profile/joris.van.den.berg/viz/SunCycleSalesDashboard/SunCycleSalesDashboard). (Пытаемся игнорировать бесячую подложку, по ней уже [все прошлись](https://t.me/datanature/224)) Сейчас отчёт больше под меня сделан.
 
 Пара комментариев по особенностям функционала Looker Studio:
 1. Фильтры, которые выносятся кнопками (за исключением даты), нельзя привязать к отдельным графикам (или, соответственно, отвязать от каких-то). Что касается временных диапазонов, то тут можно либо использовать data control, либо задавать любой другой интервал. Так, например, реализован график динамики прибыли и продаж с отображением текущего месяца. Есть статичная часть графика с заданным фиксированным интервалом всего датасета и динамичная, которая показывает только диапазон, выбранный в data control (реализовано соединением одинаковых таблиц - функционал blended data).
@@ -240,6 +187,9 @@ limit
 
 #### 3.1.2 Нет возможности редактировать стиль optional metric
 Точнее, это даже недоработка интерфейса: у optional metric нет возможности редактировать стиль, соответственно, второстепенная метрика выглядит сильно менее читабельной. 
+
+## 3. ВИЗУАЛИЗАЦИЯ ДАННЫХ С ПОМОЩЬЮ AMAZON QUICKSIGHT
+Тут тоже не обошлось без приключений. Quicksight отказывался подключаться к постгресу в AWS RDS. Судя по всему, проблема в изменённом начиная с 14 версии PostgreSQL password encryption, Quicksight так и не поддерживает SCRAM. Если проблема в этом, workaround описан [тут](https://community.amazonquicksight.com/t/my-quicksight-cannot-connect-to-rds-postgresql-db-via-vpc/4696/4). Я сходу не смогла разобраться, где конкретно и как надо прописывать (там, где я пыталась, AWS мне не дал). Решила разбираться с этим позже, но если кто-то сможет подсказать или где взять чуть более подробную инструкцию, буду очень признательна. Я решила проблему тем, что создала ещё одну RDS с PostgreSQL 13.11. 
 
 [Обратно в начало репозитория :leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
 
