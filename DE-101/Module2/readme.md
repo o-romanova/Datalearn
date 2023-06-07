@@ -66,8 +66,8 @@ order by
  
  #### 1.1.2. Изменение KPI по годам
  
- ```sql
- --Yearly KPI change, change is shown in percent
+```sql
+--Yearly KPI change, change is shown in percent
 
 SELECT
 	EXTRACT(year FROM order_date) AS year,
@@ -81,7 +81,7 @@ SELECT
 	ROUND(((SUM(profit)/SUM(sales)) / LAG(SUM(profit)/SUM(sales)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS profit_margin_change
 FROM orders
 GROUP BY EXTRACT(year FROM order_date)
-ORDER BY EXTRACT(year FROM order_date); 
+ORDER BY EXTRACT(year FROM order_date);
 ```
 
 ### 1.2 Смотрим остальные показатели 
