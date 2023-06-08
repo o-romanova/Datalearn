@@ -195,6 +195,7 @@ limit
 
 ![Superstore dashboard in Looker studio 1](Looker_superstore_dashboard_1.png)
 ![Superstore dashboard in Looker studio 2](Looker_superstore_dashboard_2.png)
+
 [Интерактивный дашборд тык](https://lookerstudio.google.com/reporting/9ec0ba74-5d20-4996-b697-36314a874d58)
 
 Оговорюсь, что внешним видом я недовольна. У меня всегда была команда дизайнеров, а самой надо всему ещё учиться, если решу в ту сторону развиваться (или аутсорсить как и раньше). Да и по содержанию дашборда есть ещё, над чем работать. У меня в голове так и не образовалось чёткой картины, для кого должен быть этот дашборд, пока он, возможно, слишком гибкий. Большинству пользователей по моему опыту не нужно столько гибкости, надо бы сильнее отфильтровать. Например, как [тут](https://public.tableau.com/app/profile/joris.van.den.berg/viz/SunCycleSalesDashboard/SunCycleSalesDashboard). (Пытаемся игнорировать бесячую подложку, по ней уже [все прошлись](https://t.me/datanature/224)).
