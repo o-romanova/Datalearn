@@ -35,12 +35,12 @@ INSERT INTO dw.calendar_dim
 SELECT 
 	to_char(date,'yyyymmdd')::int AS date_id, 
 	date::date,
-    EXTRACT('year' FROM date)::int AS year,
+    date_part('isoyear', date) AS year,
     to_char(date, 'YYYY-MM') as order_year_month,
-    EXTRACT('quarter' FROM date)::int AS quarter,
-    EXTRACT('month' FROM date)::int AS month,
-    EXTRACT('week' FROM date)::int AS week,
-    to_char(date, 'dy') AS week_day 
+    date_part('quarter', date) AS quarter,
+    date_part('month', date) AS month,
+    date_part('week', date) AS week,
+    date_part('dow', date) AS week_day
 FROM 
 	generate_series(date '2000-01-01',
                     date '2030-01-01',

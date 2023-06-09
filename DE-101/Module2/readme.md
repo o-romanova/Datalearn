@@ -27,8 +27,8 @@ C SQL получилось решить то, что не получалось �
 
 with current_year AS
 	(select 
-		extract(year from order_date) as order_year,
-		extract(month from order_date) as order_month,
+		date_part('year', order_date) as order_year,
+		date_part('month', order_date) as order_month,
 		to_char(order_date, 'YYYY-MM') as order_year_month,
 		sum(profit) over(partition by to_char(order_date, 'YYYY-MM')) as current_profit
 	from 
@@ -44,8 +44,8 @@ from
 -- join data from CTE with the same table (from subquery) but using year-1
 left join
 	(select
-		extract(year from order_date) as order_year,
-		extract(month from order_date) as order_month,
+		date_part('year', order_date) as order_year,
+		date_part('month', order_date) as order_month,
 		to_char(order_date, 'YYYY-MM') as order_year_month,
 		SUM(profit) over(partition by to_char(order_date, 'YYYY-MM')) as prev_profit	
 	 from 
@@ -71,21 +71,30 @@ order by
 --Yearly KPI change, change is shown in percent
 
 SELECT
-	EXTRACT(year FROM order_date) AS year,
+	year,
 	ROUND(SUM(profit), 1) AS profit,
-	ROUND((SUM(profit) / LAG(SUM(profit)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS profit_change,
+	ROUND((SUM(profit) / LAG(SUM(profit)) OVER w - 1) * 100, 1) AS profit_change,
 	ROUND(SUM(sales), 1) AS sales,
-	ROUND((SUM(sales) / LAG (SUM(sales)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS sales_change,
+	ROUND((SUM(sales) / LAG (SUM(sales)) OVER w - 1) * 100, 1) AS sales_change,
 	COUNT(distinct order_id) AS orders,
-	ROUND((count(distinct order_id)::numeric / LAG(count(distinct order_id)::numeric) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS orders_change,
+	ROUND((count(distinct order_id)::numeric / LAG(count(distinct order_id)::numeric) OVER w - 1) * 100, 1) AS orders_change,
 	ROUND(SUM(profit)/SUM(sales) *100, 1) AS profit_margin,
-	ROUND(((SUM(profit)/SUM(sales)) / LAG(SUM(profit)/SUM(sales)) OVER (ORDER BY EXTRACT(year FROM order_date)) - 1) * 100, 1) AS profit_margin_change
-FROM 
-	orders
-GROUP BY 
-	EXTRACT(year FROM order_date)
-ORDER BY 
-	EXTRACT(year FROM order_date);
+	ROUND(((SUM(profit)/SUM(sales)) / LAG(SUM(profit)/SUM(sales)) OVER w - 1) * 100, 1) AS profit_margin_change
+FROM
+    (
+	SELECT
+        date_part('year', order_date) AS year,
+        profit,
+        sales,
+        order_id
+    FROM
+        public.orders
+    ) subquery
+GROUP BY
+    year
+WINDOW w AS (ORDER BY year)
+ORDER BY
+    year;
 ```
 
 ![kpi yearly](kpi-yearly.png)
@@ -122,7 +131,7 @@ order by
 ```sql
 /* Profit dynamics */
 select
-	extract(year from order_date) as order_year,
+	date_part('year', order_date) as order_year,
 	--to_char(order_date, 'YYYY-MM') as order_year_month,
 	ROUND(sum(profit), 2) as profit_sum
 from 
@@ -148,7 +157,7 @@ group by
 	orders.order_date
 --filter by year if necessary
 having 
-	extract(year from order_date) = '2018'
+	date_part('year', order_date) = '2018'
 order by
 	SUM(profit) desc
 limit 
