@@ -1,48 +1,22 @@
 /*Profit per month compared to the same month of the previous year (Year over year comparison)*/
 
--- calculating profit by month and extracting year and month from the order date for using  
--- in join clause in the main SELECT statement.
-
-with current_year AS
-	(select 
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		sum(profit) over(partition by to_char(order_date, 'YYYY-MM')) as current_profit
-	from 
-		public.orders)
-		
-select
-	current_year.order_year_month,
-	ROUND(current_year.current_profit, 2) as current_profit,
-	ROUND(prev_year.prev_profit, 2) as prev_profit,
-	ROUND((current_year.current_profit / prev_year.prev_profit - 1) * 100) as percent_diff
-from
-	current_year
--- join data from CTE with the same table (from subquery) but using year-1
-left join
-	(select
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		SUM(profit) over(partition by to_char(order_date, 'YYYY-MM')) as prev_profit	
-	 from 
-	 	public.orders) as prev_year
-ON 
-	prev_year.order_year = current_year.order_year - 1 
-	and
-	prev_year.order_month = current_year.order_month
-group by 
-	current_year.order_year_month,
-	current_year.current_profit,
-	prev_year.prev_profit
-order by
-	1,2;
+SELECT
+	date_trunc('month', order_date) AS order_month,
+	ROUND(SUM(profit), 1) AS profit_by_month,
+	ROUND(LAG(SUM(profit), 12) OVER w, 1) AS profit_prev_period,
+	ROUND((SUM(profit)/LAG(SUM(profit), 12) OVER w - 1) * 100, 1) AS percent_difference
+FROM
+	orders o
+GROUP BY
+	order_month
+WINDOW w AS (ORDER BY date_trunc('month', order_date))
+ORDER BY 
+	order_month;
 
 --Yearly KPI change, change is shown in percent
 
 SELECT
-	year,
+	date_trunc('year', order_date) as year,
 	ROUND(SUM(profit), 1) AS profit,
 	ROUND((SUM(profit) / LAG(SUM(profit)) OVER w - 1) * 100, 1) AS profit_change,
 	ROUND(SUM(sales), 1) AS sales,
@@ -52,173 +26,80 @@ SELECT
 	ROUND(SUM(profit)/SUM(sales) *100, 1) AS profit_margin,
 	ROUND(((SUM(profit)/SUM(sales)) / LAG(SUM(profit)/SUM(sales)) OVER w - 1) * 100, 1) AS profit_margin_change
 FROM
-    (
-	SELECT
-        date_part('year', order_date) AS year,
-        profit,
-        sales,
-        order_id
-    FROM
         public.orders
-    ) subquery
 GROUP BY
     year
-WINDOW w AS (ORDER BY year)
+WINDOW w AS (ORDER BY date_trunc('year', order_date))
 ORDER BY
     year;
 
 
 /* Number of orders per month compared to the same month of the previous year (Year over year comparison) */
 
---Two CTEs are identical, they count orders (by month) and extract year and month 
---from the order date to be used in the join clause.
-
-with order_current AS
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count(distinct order_id) as order_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month),
-		
-	order_prev as	
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count(distinct order_id) as order_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month)
-
-select
-	order_current.order_year_month,
-	order_current.order_count as current_month_orders,
-	order_prev.order_count as previous_orders,
-	ROUND((SUM(order_current.order_count) / SUM(order_prev.order_count) - 1) * 100, 1) as percent_diff
-from
-	order_current
--- join two tables on year and month but using year-1 
-left join
-	order_prev
-on
-	order_prev.order_year = order_current.order_year - 1 
-	and
-	order_prev.order_month = order_current.order_month
-group by
-	order_current.order_year_month,
-	--order_prev.order_year_month,
-	order_current.order_count,
-	order_prev.order_count
-order by 
-	order_current.order_year_month;
+WITH order_count AS 
+	(
+    SELECT 
+        date_trunc('month', order_date) AS order_month,
+        COUNT(distinct order_id) AS orders_by_month,
+        LAG(COUNT(distinct order_id), 12) OVER(ORDER BY date_trunc('month', order_date)) AS orders_prev_period
+    FROM 
+        orders
+    GROUP BY
+        date_trunc('month', order_date)
+	)
+SELECT
+    order_month,
+    orders_by_month,
+    orders_prev_period,
+    ROUND((orders_by_month - orders_prev_period) * 100.0 / orders_prev_period, 1) AS percent_difference
+FROM
+    order_count
+ORDER BY 
+    order_month;
 
 
 
 /* Average discount per month compared to the same month of the previous year (Year over year comparison) */
 
--- CTE calculates average discount by month and extracts year and month from the order date 
--- for using in join clause in the main SELECT statement
-
-with current_year AS
-	(select 
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		avg(discount) over(partition by to_char(order_date, 'YYYY-MM')) as current_discount
-	from 
-		public.orders)
-
-select
-	current_year.order_year_month,
-	ROUND(current_year.current_discount * 100, 1) AS current_year_discount,
-	ROUND(prev_year.prev_discount * 100, 1) as previous_year_discount,
-	ROUND((current_year.current_discount / prev_year.prev_discount -1) * 100, 1) as percent_diff
-from
-	current_year
--- join with the same table (from subquery) but using year-1 
-left join
-	(select
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		avg(discount) over(partition by to_char(order_date, 'YYYY-MM')) as prev_discount	
-	 from 
-	 	public.orders) as prev_year
-ON 
-	prev_year.order_year = current_year.order_year - 1 
-	and
-	prev_year.order_month = current_year.order_month
-group by 
-	current_year.order_year_month,
-	current_year.current_discount,
-	prev_year.prev_discount
-order by
-	1;
+SELECT
+	date_trunc('month', order_date) AS order_month,
+	ROUND(AVG(discount) * 100, 1) AS discount_by_month,
+	ROUND(LAG(AVG(discount) *100, 12) OVER w, 1) AS discount_prev_period,
+	ROUND((AVG(discount) / LAG(AVG(discount), 12) OVER w - 1) * 100, 1) AS percent_difference
+FROM
+	orders o
+GROUP BY
+	date_trunc('month', order_date)
+WINDOW w AS (ORDER BY date_trunc('month', order_date))
+ORDER BY 
+	date_trunc('month', order_date);
 
 
 /* Number of customers per month compared to the same month of the previous year (Year over year comparison) */
 
--- Two CTEs are identical, they count customers (by month) and extract year and month from the order date to be used in the join clause
-
-with order_current AS
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count (distinct customer_id) as customer_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month),
-	order_prev as	
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			count(distinct customer_id) as customer_count
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month)
-select
-	order_current.order_year_month,
-	order_current.customer_count AS customer_count,
-	SUM(order_prev.customer_count) as prev_customer_count,
-	ROUND((SUM(order_current.customer_count) / SUM(order_prev.customer_count) - 1) * 100, 1) AS percent_diff
-from
-	order_current
--- join two CTEs on year and month but using year-1 
-left join
-	order_prev
-on
-	order_prev.order_year = order_current.order_year - 1 
-	and
-	order_prev.order_month = order_current.order_month
-group by
-	order_current.order_year_month,
-	order_current.customer_count,
-	order_prev.customer_count
-order by 
-	order_current.order_year_month;
-
+WITH customer_count AS 
+	(
+    SELECT 
+        date_trunc('month', order_date) AS order_month,
+        COUNT(distinct customer_id) AS customers_by_month,
+        LAG(COUNT(distinct customer_id), 12) OVER(ORDER BY date_trunc('month', order_date)) AS customers_prev_period
+    FROM 
+        orders
+    GROUP BY
+        date_trunc('month', order_date)
+	)
+SELECT
+    order_month,
+    customers_by_month,
+    customers_prev_period,
+    ROUND((customers_by_month - customers_prev_period) * 100.0 / customers_prev_period, 1) AS percent_difference
+FROM
+    customer_count
+ORDER BY 
+    order_month;
 
 
 /* Sales per customer per month compared to the same month of the previous year (Year over year comparison) */
-
---Two CTEs are identical, they sum sales per customer (by month) and extract year and month from the order date to be used in the join clause
 
 with order_current AS
 	(select 
