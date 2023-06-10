@@ -101,49 +101,30 @@ ORDER BY
 
 /* Sales per customer per month compared to the same month of the previous year (Year over year comparison) */
 
-with order_current AS
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			sum(sales)/count(distinct customer_id) as sales_customer
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month),
-	
-	order_prev as	
-	(select 
-			date_part('year', order_date) as order_year,
-			date_part('month', order_date) as order_month,
-			to_char(order_date, 'YYYY-MM') as order_year_month,
-			sum(sales)/count(distinct customer_id) as sales_customer
-		from 
-			public.orders
-	group by 
-		order_year,
-		order_month,
-		order_year_month)
-
-select
-	order_current.order_year_month,
-	ROUND(order_current.sales_customer, 1) as sales_per_customer,
-	ROUND(order_prev.sales_customer, 1) as prev_sales_per_customer,
-	ROUND((order_current.sales_customer / order_prev.sales_customer -1) * 100, 1) as percent_diff
-from
-	order_current
--- join two CTEs on year and month but using year-1 
-left join
-	order_prev
-on
-	order_prev.order_year = order_current.order_year - 1 
-	and
-	order_prev.order_month = order_current.order_month
-order by 
-	order_current.order_year_month;
-
+WITH sales_customer AS 
+	(
+    SELECT 
+        date_trunc('month', order_date) AS order_month,
+        COUNT(distinct customer_id) AS customer_count,
+        SUM(sales) AS sales,
+        SUM(sales) / COUNT(distinct customer_id) AS customer_sales_by_month,
+        LAG(SUM(sales), 12) OVER w AS sales_prev,
+        LAG(COUNT(distinct customer_id), 12) OVER w AS customers_prev_period
+    FROM 
+        orders
+    GROUP BY
+        date_trunc('month', order_date)
+    WINDOW w AS (ORDER BY date_trunc('month', order_date))
+	)
+SELECT
+    order_month,
+    ROUND(customer_sales_by_month, 1),
+    ROUND(sales_prev / customers_prev_period, 1) AS customer_sales_prev,
+    ROUND((customer_sales_by_month - sales_prev/customers_prev_period) / (sales_prev / customers_prev_period) * 100, 1) AS percent_difference
+FROM
+    sales_customer
+ORDER BY 
+    order_month;
 
 
 /* Lost profit. Returned orders by state */
@@ -170,8 +151,8 @@ order by
 	
 /* Profit dynamics */
 select
-	date_part('year', order_date) as order_year,
-	--to_char(order_date, 'YYYY-MM') as order_year_month,
+	--date_trunc('year', order_date) as order_year,
+	date_trunc('month', order_date) as order_year_month,
 	ROUND(sum(profit), 2) as profit_sum
 from 
 	public.orders
@@ -179,12 +160,13 @@ group by
 	order_year	
 	--order_year_month
 order by
-	order_year;	
+	order_year_month
+	--order_year_month;	
 
 
 /* Sales and profit by product category and subcategory */
 select
-	to_char(order_date, 'YYYY-MM') as order_year_month,	
+	date_trunc('month', order_date) as order_year_month,	
 	category,
 	subcategory,
 	ROUND(SUM(sales), 2) as sales_sum,
@@ -196,7 +178,7 @@ group by
 	subcategory,
 	order_year_month
 having 
-	to_char(order_date, 'YYYY-MM') = '2019-03'
+	date_trunc('month', order_date) = '2019-03-01'
 order by
 profit_sum DESC,	
 category;
@@ -213,7 +195,7 @@ group by
 	orders.order_date
 --filter by year if necessary
 having 
-	date_part('year', order_date) = '2018'
+	date_trunc('year', order_date) = '2018-01-01'
 order by
 	SUM(profit) desc
 limit 

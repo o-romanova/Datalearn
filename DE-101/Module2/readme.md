@@ -37,7 +37,7 @@ ORDER BY
 ```
 ![profit monthly yoy](profit_montly_yoy.png)
 
-Другие KPI считаются аналогично, просто заменяем названия столбцов и функцию агрегирования в основном селекте. Я для разнообразия немного разными способами написала запросы.
+Другие KPI считаются аналогично, просто заменяем названия столбцов и функцию агрегирования.
  
  #### 1.1.2. Изменение KPI по годам
  
@@ -97,8 +97,8 @@ order by
 ```sql
 /* Profit dynamics */
 select
-	date_part('year', order_date) as order_year,
-	--to_char(order_date, 'YYYY-MM') as order_year_month,
+	--date_trunc('year', order_date) as order_year,
+	date_trunc('month', order_date) as order_year_month,
 	ROUND(sum(profit), 2) as profit_sum
 from 
 	public.orders
@@ -106,7 +106,8 @@ group by
 	order_year	
 	--order_year_month
 order by
-	order_year;		
+	order_year_month
+	--order_year_month;			
 ```
 ![profit dynamics](profit_dynamics.png)
 
@@ -123,11 +124,11 @@ group by
 	orders.order_date
 --filter by year if necessary
 having 
-	date_part('year', order_date) = '2018'
+	date_trunc('year', order_date) = '2018-01-01'
 order by
 	SUM(profit) desc
 limit 
-	10;		
+	10;			
 ```
 
 ![top 10 products by profit](top_10_products_profit.png)
@@ -211,5 +212,7 @@ limit
 И ещё дашбордом, насколько я поняла, наружу не поделиться. Только пользователи, имеющие доступ к аккаунту, могут смотреть. А так только выгружать в пдф или ещё во что. Не знаю, в общем, насколько это рабочий инструмент. 
 
 Уф. Надеюсь мои грабли кому-нибудь пригодятся, кроме меня ;)
+
+UPD: Огромное спасибо коммьюнити DataLearn! Особенно Ruslan, Daniel и Yurii Z. С помощью ваших комментариев я значительно оптимизировала код и наметила приоритетные области восполнения пробелов. 
 
 [Обратно в начало репозитория :leftwards_arrow_with_hook:](https://github.com/Bigdataworm/Datalearn)
