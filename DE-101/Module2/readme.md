@@ -25,41 +25,18 @@ C SQL получилось решить то, что не получалось �
 -- calculating profit by month and extracting year and month from the order date for using  
 -- in join clause in the main SELECT statement.
 
-with current_year AS
-	(select 
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		sum(profit) over(partition by to_char(order_date, 'YYYY-MM')) as current_profit
-	from 
-		public.orders)
-		
-select
-	current_year.order_year_month,
-	ROUND(current_year.current_profit, 2) as current_profit,
-	ROUND(prev_year.prev_profit, 2) as prev_profit,
-	ROUND((current_year.current_profit / prev_year.prev_profit - 1) * 100) as percent_diff
-from
-	current_year
--- join data from CTE with the same table (from subquery) but using year-1
-left join
-	(select
-		date_part('year', order_date) as order_year,
-		date_part('month', order_date) as order_month,
-		to_char(order_date, 'YYYY-MM') as order_year_month,
-		SUM(profit) over(partition by to_char(order_date, 'YYYY-MM')) as prev_profit	
-	 from 
-	 	public.orders) as prev_year
-ON 
-	prev_year.order_year = current_year.order_year - 1 
-	and
-	prev_year.order_month = current_year.order_month
-group by 
-	current_year.order_year_month,
-	current_year.current_profit,
-	prev_year.prev_profit
-order by
-	1,2;
+SELECT
+	date_trunc('month', order_date) AS order_month,
+	ROUND(SUM(profit), 1) AS profit_by_month,
+	ROUND(LAG(SUM(profit), 12) OVER w, 1) AS profit_prev_period,
+	ROUND((SUM(profit)/LAG(SUM(profit), 12) OVER w - 1) * 100, 1) AS percent_difference
+FROM
+	orders o
+GROUP BY
+	order_month
+WINDOW w AS (ORDER BY date_trunc('month', order_date))
+ORDER BY 
+	order_month;
 ```
 ![profit monthly yoy](profit_montly_yoy.png)
 
