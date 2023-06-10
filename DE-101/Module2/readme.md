@@ -22,9 +22,6 @@ C SQL получилось решить то, что не получалось �
 ```sql
 /*Profit per month compared to the same month of the previous year (Year over year comparison)*/
 
--- calculating profit by month and extracting year and month from the order date for using  
--- in join clause in the main SELECT statement.
-
 SELECT
 	date_trunc('month', order_date) AS order_month,
 	ROUND(SUM(profit), 1) AS profit_by_month,
