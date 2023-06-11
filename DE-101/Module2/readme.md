@@ -97,8 +97,8 @@ order by
 ```sql
 /* Profit dynamics */
 select
-	--date_trunc('year', order_date) as order_year,
-	date_trunc('month', order_date) as order_year_month,
+	date_trunc('year', order_date) as order_year,
+	--date_trunc('month', order_date) as order_year_month,
 	ROUND(sum(profit), 2) as profit_sum
 from 
 	public.orders
